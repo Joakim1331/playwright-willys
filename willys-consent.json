@@ -1,0 +1,133 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "Y1-5b07982c-7113-4cb8-ba02-01be3924d07c",
+      "domain": "www.willys.se",
+      "path": "/",
+      "expires": 1762238370.906584,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "RequestId",
+      "value": "SM3v7cKbchT4vP0Zy-coSWkDymXu8FaeJAiF",
+      "domain": "www.willys.se",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "AWSALB",
+      "value": "/xDl83dRZJAYs94hmMDWQ9ECsxY6tygoC+ohkLI54Ukt0woU81lXixipKhIWo28Yw3v+Y5TOyD3PBnifWL1KxlK+Bd8RF9SPjK4o2FrP6WT9D3A9qPdZpNtspqBU",
+      "domain": "www.willys.se",
+      "path": "/",
+      "expires": 1762841370.906447,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "AWSALBCORS",
+      "value": "/xDl83dRZJAYs94hmMDWQ9ECsxY6tygoC+ohkLI54Ukt0woU81lXixipKhIWo28Yw3v+Y5TOyD3PBnifWL1KxlK+Bd8RF9SPjK4o2FrP6WT9D3A9qPdZpNtspqBU",
+      "domain": "www.willys.se",
+      "path": "/",
+      "expires": 1762841370.906543,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "imbox",
+      "value": "{\"imboxUid\":\"350ANjwkNoHgX8ZV7ZZqDoA82N8\"}",
+      "domain": "www.willys.se",
+      "path": "/",
+      "expires": 1764828573,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "OptanonAlertBoxClosed",
+      "value": "2025-11-04T06:09:34.524Z",
+      "domain": ".willys.se",
+      "path": "/",
+      "expires": 1793772574,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_gcl_au",
+      "value": "1.1.676575629.1762236575",
+      "domain": ".willys.se",
+      "path": "/",
+      "expires": 1770012574,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sg_optin",
+      "value": "1",
+      "domain": ".willys.se",
+      "path": "/",
+      "expires": 1770012574,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sg_cs_object",
+      "value": "{%225620544%22:{%22ga_queue%22:[]}}",
+      "domain": ".willys.se",
+      "path": "/",
+      "expires": 1762238374,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "OptanonConsent",
+      "value": "isGpcEnabled=0&datestamp=Tue+Nov+04+2025+07%3A09%3A34+GMT%2B0100+(Central+European+Standard+Time)&version=202503.1.0&browserGpcFlag=0&isIABGlobal=false&consentId=0ec6ee58-19aa-42b5-9f57-02644f33d219&interactionCount=1&isAnonUser=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1&hosts=H25%3A1%2CH8%3A1%2CH3%3A1%2CH11%3A1&genVendors=&intType=1",
+      "domain": ".willys.se",
+      "path": "/",
+      "expires": 1793772574,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sg_cookies",
+      "value": "{%225620544%22:{%22rf%22:%22%22%2C%22sc%22:1%2C%22lv%22:1762236574590%2C%22pv%22:1%2C%22pv_p%22:{}%2C%22tv%22:1%2C%22tv_p%22:{}}%2C%22_g%22:1}",
+      "domain": ".willys.se",
+      "path": "/",
+      "expires": 1770012574,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.willys.se",
+      "localStorage": [
+        {
+          "name": "NRBA_SESSION",
+          "value": "{\"value\":\"775a3b3f4325b9d7\",\"inactiveAt\":1762238374515,\"expiresAt\":1762250974056,\"updatedAt\":1762236574515,\"sessionReplayMode\":0,\"sessionReplaySentFirstChunk\":false,\"sessionTraceMode\":0,\"traceHarvestStarted\":false,\"loggingMode\":0,\"serverTimeDiff\":-3860,\"custom\":{},\"numOfResets\":0}"
+        },
+        {
+          "name": "sg_ls_object",
+          "value": "{\"pageViews\":{\"https://www.willys.se/\":{\"pageview\":1}}}"
+        },
+        {
+          "name": "_gcl_ls",
+          "value": "{\"schema\":\"gcl\",\"version\":1,\"gcl_ctr\":{\"value\":{\"value\":0,\"timeouts\":0,\"creationTimeMs\":1762236574550},\"expires\":1770012574550}}"
+        }
+      ]
+    }
+  ]
+}
