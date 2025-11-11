@@ -54,7 +54,7 @@ await expect(page.getByRole('heading', { level: 1, name: /morötter/i })).toBeVi
 //await expect(page.locator('a[href^="/produkt/"]').first()).toBeVisible();
 
 // --- Wait until at least one carrot product with Jmf-pris is rendered
-const carrotCards = page.locator('main').locator('div')
+const carrotCards = page.locator('article, div[data-item], div.sc-9f1d623-5')
   .filter({ hasText: /Morot|Morötter/i })
   .filter({ hasText: /Jmf-pris\s*[\d.,]+\s*kr\/kg/i });
 
