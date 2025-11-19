@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { closeDeliveryPopup } from './helpers/delivery.js';
 
 test('add and remove item from cart and validate total = 0 kr', async ({ context, page }) => {
   // --- Accept cookies automatically ---
@@ -25,6 +26,7 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
     }
   });
 
+
   // --- Navigate ---
   await page.goto('https://www.willys.se', { waitUntil: 'domcontentloaded' });
 
@@ -44,53 +46,73 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
 
   await expect(carrotCards.first()).toBeVisible();
 
-  // --- Find the cheapest ---
+    // --- Find the cheapest ---
   const count = await carrotCards.count();
   let cheapestIdx = -1;
   let cheapestPrice = Infinity;
 
-for (let i = 0; i < count; i++) {
-  const text = await carrotCards.nth(i).innerText();
-  const match = /Jmf-pris\s*([\d.,]+)\s*kr\/kg/i.exec(text);
+  for (let i = 0; i < count; i++) {
+    const text = await carrotCards.nth(i).innerText();
+    const match = /Jmf-pris\s*([\d.,]+)\s*kr\/kg/i.exec(text);
 
-  // ✅ Guard clause — prevents the TS2532 warning
-  if (!match || !match[1]) continue;
+    if (!match || !match[1]) continue;
 
-  const price = parseFloat(match[1].replace(',', '.'));
-  if (price < cheapestPrice) {
-    cheapestPrice = price;
-    cheapestIdx = i;
+    const price = parseFloat(match[1].replace(',', '.'));
+    if (price < cheapestPrice) {
+      cheapestPrice = price;
+      cheapestIdx = i;
+    }
   }
-}
 
-  const cheapestCard = carrotCards.nth(cheapestIdx);
+  expect(cheapestIdx, 'No Jmf-pris found for any carrot product')
+    .toBeGreaterThanOrEqual(0);
+
+  const cheapestCard = carrotCards.nth(cheapestIdx);        // 👈 this was missing
   const incrementBtn = cheapestCard.getByRole('button', { name: /Öka antal/i });
   await expect(incrementBtn).toBeEnabled();
   await incrementBtn.click();
+
+    // --- Close "Välj leveranssätt" popup if it appears as a dialog ---
+  const deliveryDialog = page.getByRole('dialog', { name: /Välj leveranssätt/i });
+  if (await deliveryDialog.isVisible()) {
+    const closeDialogBtn = deliveryDialog
+      .locator('button[aria-label*="stäng" i], button[aria-label*="close" i], button:has-text("×")')
+      .first();
+    await closeDialogBtn.click();
+    await expect(deliveryDialog).toBeHidden();
+  }
 
   // --- Open cart ---
   const cartButton = page.getByRole('button', { name: /Varukorg:/i });
   await cartButton.click();
 
-// --- Open cart ---  (you already clicked it above)
-const cartDrawer = page.getByRole('complementary', { name: /Varukorg/i });
-await expect(cartDrawer).toBeVisible();
+  const cartDrawer = page.getByRole('complementary', { name: /Varukorg/i });
+  await expect(cartDrawer).toBeVisible();
 
-// --- Empty the cart ---
-const emptyBtn = cartDrawer.getByRole('button', { name: /Töm varukorg/i });
-await expect(emptyBtn).toBeEnabled();
-await emptyBtn.click();
+  // --- Close delivery widget if it overlaps the page ---
+  const deliveryWidget = page.locator('[data-testid="delivery-picker-widget"]');
+  if (await deliveryWidget.isVisible()) {
+    const closeDelivery = page.getByRole('button', { name: /Stäng/i });
+    await closeDelivery.click();
+    await expect(deliveryWidget).toBeHidden();
+  }
 
-// Optional confirm step (if site asks again)
-const confirmEmpty = page.getByRole('button', { name: /Töm varukorg/i });
-if (await confirmEmpty.isVisible()) {
-  await confirmEmpty.click();
-}
+  // --- Empty the cart ---
+  const emptyBtn = cartDrawer.getByRole('button', { name: /Töm varukorg/i });
+  await expect(emptyBtn).toBeEnabled();
+  await emptyBtn.click();
 
-// --- Validate total = 0 kr and 0 items ---
-await expect(cartDrawer.getByText(/Totalt\s*\(0 varor\)/i)).toBeVisible();
-await expect(cartDrawer.getByText(/\b0,00\s*kr\b/)).toBeVisible();
+  // Optional confirm step (if site asks again)
+  const confirmEmpty = page.getByRole('button', { name: /Töm varukorg/i });
+  if (await confirmEmpty.isVisible()) {
 
+    await confirmEmpty.click();
+  }
+
+  // --- Validate total = 0 kr and 0 items ---
+  await expect(cartDrawer.getByText(/Totalt\s*\(0 varor\)/i)).toBeVisible();
+  await expect(cartDrawer.getByText(/\b0,00\s*kr\b/)).toBeVisible();
 
   console.log('✅ Cart is empty, total = 0 kr');
+
 });
