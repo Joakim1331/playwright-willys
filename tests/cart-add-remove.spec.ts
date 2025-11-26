@@ -84,7 +84,10 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
 
   // --- Open cart ---
   const cartButton = page.getByRole('button', { name: /Varukorg:/i });
+    await closeDeliveryPopup(page);
   await cartButton.click();
+    await closeDeliveryPopup(page);
+
 
   const cartDrawer = page.getByRole('complementary', { name: /Varukorg/i });
   await expect(cartDrawer).toBeVisible();
