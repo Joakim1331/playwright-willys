@@ -3,47 +3,51 @@ import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 export async function closeDeliveryPopup(page: Page): Promise<void> {
-  console.log('🔍 [delivery helper] Checking for "Välj leveranssätt" popup');
+  console.log('🔍 [delivery helper] Checking for delivery popup');
 
-  const popup = page.getByRole('dialog', { name: /Välj leveranssätt/i });
+  // Variant 1: dialog with accessible name "Välj leveranssätt"
+  const dialog = page.getByRole('dialog', { name: /Välj leveranssätt/i });
 
-  // Check if the locator actually matches anything
-  const count = await popup.count();
-  console.log(`🔍 [delivery helper] Dialog locator count: ${count}`);
+  // Variant 2: widget overlay
+  const widget = page.locator('[data-testid="delivery-picker-widget"]');
 
-  if (count === 0) {
-    console.log('ℹ️ [delivery helper] No dialog with role="dialog" and that name found');
-    return;
-  }
-
+  // --- Try the dialog variant first ---
   try {
-    await expect(popup).toBeVisible({ timeout: 5000 });
-  } catch (e) {
-    console.log('⚠️ [delivery helper] Dialog not visible within 5s', e);
-    return;
+    await dialog.waitFor({ state: 'visible', timeout: 2000 });
+    console.log('🚨 [delivery helper] Found dialog "Välj leveranssätt"');
+
+    const closeDialogBtn = dialog
+      .locator(
+        'button[aria-label*="stäng" i], button[aria-label*="close" i], button:has-text("×"), button:has-text("Stäng")'
+      )
+      .first();
+
+    if (await closeDialogBtn.isVisible()) {
+      await closeDialogBtn.click();
+      await expect(dialog).toBeHidden({ timeout: 5000 });
+      console.log('✅ [delivery helper] Closed dialog variant');
+      return;
+    } else {
+      console.log('❓ [delivery helper] Dialog found but close button not visible');
+    }
+  } catch {
+    // No dialog within timeout – that’s fine, we’ll try widget next
   }
 
-  // Optional: pause once we *know* the popup exists, to inspect it
-  // Comment this out once you're happy.
-  // @ts-expect-error Playwright adds this at runtime
-  await page.pause();
+  // --- Try the widget variant ---
+  if (await widget.isVisible().catch(() => false)) {
+    console.log('🚨 [delivery helper] Found delivery widget overlay');
 
-  const closeBtn = popup
-    .locator(
-      'button[aria-label*="stäng" i], button[aria-label*="close" i], button:has-text("×")'
-    )
-    .first();
-
-  const closeVisible = await closeBtn.isVisible().catch(() => false);
-  console.log(`🔍 [delivery helper] Close button visible: ${closeVisible}`);
-
-  if (!closeVisible) {
-    console.log('❓ [delivery helper] Popup found but close button not visible / matched');
-    return;
+    const closeWidgetBtn = page.getByRole('button', { name: /Stäng/i }).first();
+    if (await closeWidgetBtn.isVisible().catch(() => false)) {
+      await closeWidgetBtn.click();
+      await expect(widget).toBeHidden({ timeout: 5000 });
+      console.log('✅ [delivery helper] Closed widget variant');
+      return;
+    } else {
+      console.log('❓ [delivery helper] Widget visible but could not find close button');
+    }
   }
 
-  await closeBtn.click();
-  await expect(popup).toBeHidden({ timeout: 5000 });
-
-  console.log('✅ [delivery helper] Closed "Välj leveranssätt" popup');
+  console.log('ℹ️ [delivery helper] No delivery popup detected');
 }

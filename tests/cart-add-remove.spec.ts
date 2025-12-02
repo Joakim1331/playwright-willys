@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { closeDeliveryPopup } from './helpers/delivery.js';
 
+test.setTimeout(90_000); // give this UI-heavy test more time
+
 test('add and remove item from cart and validate total = 0 kr', async ({ context, page }) => {
   // --- Accept cookies automatically ---
   await context.addInitScript(() => {
@@ -26,18 +28,23 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
     }
   });
 
-
   // --- Navigate ---
-  await page.goto('https://www.willys.se', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://www.willys.se');
+  await closeDeliveryPopup(page); // early popup
 
   // --- Search for morötter ---
   const searchBox = page.getByRole('combobox', { name: /Sök i e-handeln/i });
   await expect(searchBox).toBeVisible();
   await searchBox.fill('morötter');
-  await Promise.all([
-    page.waitForURL(/\/sok\?q=mor/i),
-    searchBox.press('Enter'),
-  ]);
+  await searchBox.press('Enter');
+
+  // Wait for URL AND results instead of a "load" event
+  await expect(page).toHaveURL(/\/sok\?q=mor/i);
+  await expect(
+    page.getByRole('heading', { name: /Visar resultat för "morötter"/i })
+  ).toBeVisible();
+
+  await closeDeliveryPopup(page); // after search/navigation
 
   // --- Locate all carrot products ---
   const carrotCards = page.locator('article, div[data-item], div.sc-9f1d623-5')
@@ -46,7 +53,7 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
 
   await expect(carrotCards.first()).toBeVisible();
 
-    // --- Find the cheapest ---
+  // --- Find the cheapest ---
   const count = await carrotCards.count();
   let cheapestIdx = -1;
   let cheapestPrice = Infinity;
@@ -67,55 +74,55 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
   expect(cheapestIdx, 'No Jmf-pris found for any carrot product')
     .toBeGreaterThanOrEqual(0);
 
-  const cheapestCard = carrotCards.nth(cheapestIdx);        // 👈 this was missing
+  const cheapestCard = carrotCards.nth(cheapestIdx);
   const incrementBtn = cheapestCard.getByRole('button', { name: /Öka antal/i });
   await expect(incrementBtn).toBeEnabled();
   await incrementBtn.click();
 
-    // --- Close "Välj leveranssätt" popup if it appears as a dialog ---
-  const deliveryDialog = page.getByRole('dialog', { name: /Välj leveranssätt/i });
-  if (await deliveryDialog.isVisible()) {
-    const closeDialogBtn = deliveryDialog
-      .locator('button[aria-label*="stäng" i], button[aria-label*="close" i], button:has-text("×")')
-      .first();
-    await closeDialogBtn.click();
-    await expect(deliveryDialog).toBeHidden();
-  }
+  // Popup often appears right after adding to cart
+  await closeDeliveryPopup(page);
 
   // --- Open cart ---
   const cartButton = page.getByRole('button', { name: /Varukorg:/i });
-    await closeDeliveryPopup(page);
   await cartButton.click();
-    await closeDeliveryPopup(page);
 
+  // And sometimes again when opening the cart
+  await closeDeliveryPopup(page);
 
   const cartDrawer = page.getByRole('complementary', { name: /Varukorg/i });
-  await expect(cartDrawer).toBeVisible();
-
-  // --- Close delivery widget if it overlaps the page ---
-  const deliveryWidget = page.locator('[data-testid="delivery-picker-widget"]');
-  if (await deliveryWidget.isVisible()) {
-    const closeDelivery = page.getByRole('button', { name: /Stäng/i });
-    await closeDelivery.click();
-    await expect(deliveryWidget).toBeHidden();
-  }
+  await expect(cartDrawer).toBeVisible({ timeout: 15_000 });
 
   // --- Empty the cart ---
   const emptyBtn = cartDrawer.getByRole('button', { name: /Töm varukorg/i });
   await expect(emptyBtn).toBeEnabled();
   await emptyBtn.click();
 
-  // Optional confirm step (if site asks again)
-  const confirmEmpty = page.getByRole('button', { name: /Töm varukorg/i });
-  if (await confirmEmpty.isVisible()) {
+  // --- Handle confirm popup: "Är du säker på att du vill tömma din varukorg?" ---
+  const confirmQuestion = page.getByText(/Är du säker på att du vill tömma din varukorg\?/i);
+  const confirmVisible = await confirmQuestion.isVisible().catch(() => false);
 
-    await confirmEmpty.click();
+  if (confirmVisible) {
+    console.log('🧺 Confirm dialog for emptying cart appeared');
+
+    const confirmBtn = page.getByRole('button', { name: /^Töm$/i }).first();
+    await expect(confirmBtn).toBeEnabled();
+    await confirmBtn.click();
+
+    await expect(confirmQuestion).toBeHidden({ timeout: 5000 });
+
+    console.log('✅ Confirmed empty cart by clicking "Töm"');
+  } else {
+    console.log('ℹ️ No confirm dialog when emptying cart');
   }
 
   // --- Validate total = 0 kr and 0 items ---
-  await expect(cartDrawer.getByText(/Totalt\s*\(0 varor\)/i)).toBeVisible();
-  await expect(cartDrawer.getByText(/\b0,00\s*kr\b/)).toBeVisible();
+  await expect(
+    cartDrawer.getByText(/Totalt\s*\(0 varor\)/i)
+  ).toBeVisible({ timeout: 15_000 });
+
+  await expect(
+    cartDrawer.getByText(/\b0,00\s*kr\b/)
+  ).toBeVisible({ timeout: 15_000 });
 
   console.log('✅ Cart is empty, total = 0 kr');
-
 });
