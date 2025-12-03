@@ -1,23 +1,24 @@
-import { test, expect } from '@playwright/test';
-import { closeDeliveryPopup } from './helpers/delivery.js';
+import { test, expect } from "@playwright/test";
+import { closeDeliveryPopup } from "./helpers/delivery";
+import { openCart, emptyCart, assertCartEmpty } from "./helpers/cart";
 
-test.setTimeout(90_000); // give this UI-heavy test more time
+test.setTimeout(60_000);
 
-test('add and remove item from cart and validate total = 0 kr', async ({ context, page }) => {
-  // --- Accept cookies automatically ---
+test("add and remove item from cart and validate total = 0 kr", async ({ context, page }) => {
+  // --- Auto-accept cookies (your original logic preserved) ---
   await context.addInitScript(() => {
-    const match = (el: Element) =>
-      el.tagName === 'BUTTON' &&
-      /Acceptera alla cookies|Godkänn|Tillåt alla/i.test(el.textContent || '');
-    const tryClick = (): boolean => {
-      const btn = Array.from(document.querySelectorAll('button')).find(match);
-      if (btn) { (btn as HTMLButtonElement).click(); return true; }
-      for (const frame of Array.from(document.querySelectorAll('iframe'))) {
+    const match = (el) =>
+      el.tagName === "BUTTON" &&
+      /Acceptera alla cookies|Godkänn|Tillåt alla/i.test(el.textContent || "");
+    const tryClick = () => {
+      const btn = [...document.querySelectorAll("button")].find(match);
+      if (btn) { btn.click(); return true; }
+      for (const frame of [...document.querySelectorAll("iframe")]) {
         try {
           const doc = frame.contentDocument;
           if (!doc) continue;
-          const fbtn = Array.from(doc.querySelectorAll('button')).find(match);
-          if (fbtn) { (fbtn as HTMLButtonElement).click(); return true; }
+          const fbtn = [...doc.querySelectorAll("button")].find(match);
+          if (fbtn) { fbtn.click(); return true; }
         } catch {}
       }
       return false;
@@ -29,100 +30,56 @@ test('add and remove item from cart and validate total = 0 kr', async ({ context
   });
 
   // --- Navigate ---
-  await page.goto('https://www.willys.se');
-  await closeDeliveryPopup(page); // early popup
+  await page.goto("https://www.willys.se");
+  await closeDeliveryPopup(page);
 
-  // --- Search for morötter ---
-  const searchBox = page.getByRole('combobox', { name: /Sök i e-handeln/i });
+  // --- Search ---
+  const searchBox = page.getByRole("combobox", { name: /Sök i e-handeln/i });
   await expect(searchBox).toBeVisible();
-  await searchBox.fill('morötter');
-  await searchBox.press('Enter');
+  await searchBox.fill("morötter");
+  await searchBox.press("Enter");
 
-  // Wait for URL AND results instead of a "load" event
   await expect(page).toHaveURL(/\/sok\?q=mor/i);
   await expect(
-    page.getByRole('heading', { name: /Visar resultat för "morötter"/i })
+    page.getByRole("heading", { name: /Visar resultat för "morötter"/i })
   ).toBeVisible();
 
-  await closeDeliveryPopup(page); // after search/navigation
+  await closeDeliveryPopup(page);
 
-  // --- Locate all carrot products ---
-  const carrotCards = page.locator('article, div[data-item], div.sc-9f1d623-5')
+  // --- Find cheapest carrot ---
+  const carrots = page
+    .locator('article, div[data-item], div.sc-9f1d623-5')
     .filter({ hasText: /Morot|Morötter/i })
     .filter({ hasText: /Jmf-pris\s*[\d.,]+\s*kr\/kg/i });
 
-  await expect(carrotCards.first()).toBeVisible();
+  await expect(carrots.first()).toBeVisible();
 
-  // --- Find the cheapest ---
-  const count = await carrotCards.count();
   let cheapestIdx = -1;
-  let cheapestPrice = Infinity;
+  let lowest = Infinity;
 
-  for (let i = 0; i < count; i++) {
-    const text = await carrotCards.nth(i).innerText();
-    const match = /Jmf-pris\s*([\d.,]+)\s*kr\/kg/i.exec(text);
-
-    if (!match || !match[1]) continue;
-
-    const price = parseFloat(match[1].replace(',', '.'));
-    if (price < cheapestPrice) {
-      cheapestPrice = price;
-      cheapestIdx = i;
-    }
+  for (let i = 0; i < await carrots.count(); i++) {
+    const txt = await carrots.nth(i).innerText();
+    const match = /Jmf-pris\s*([\d.,]+)\s*kr\/kg/i.exec(txt);
+    if (!match) continue;
+    const price = parseFloat(match[1].replace(",", "."));
+    if (price < lowest) { lowest = price; cheapestIdx = i; }
   }
 
-  expect(cheapestIdx, 'No Jmf-pris found for any carrot product')
-    .toBeGreaterThanOrEqual(0);
+  expect(cheapestIdx).toBeGreaterThanOrEqual(0);
 
-  const cheapestCard = carrotCards.nth(cheapestIdx);
-  const incrementBtn = cheapestCard.getByRole('button', { name: /Öka antal/i });
-  await expect(incrementBtn).toBeEnabled();
-  await incrementBtn.click();
+  const cheapest = carrots.nth(cheapestIdx);
+  await cheapest.getByRole("button", { name: /Öka antal/i }).click();
 
-  // Popup often appears right after adding to cart
   await closeDeliveryPopup(page);
 
   // --- Open cart ---
-  const cartButton = page.getByRole('button', { name: /Varukorg:/i });
-  await cartButton.click();
+  const cartDrawer = await openCart(page);
 
-  // And sometimes again when opening the cart
-  await closeDeliveryPopup(page);
+  // --- Empty cart ---
+  await emptyCart(page);
 
-  const cartDrawer = page.getByRole('complementary', { name: /Varukorg/i });
-  await expect(cartDrawer).toBeVisible({ timeout: 15_000 });
+  // --- Validate totals ---
+  await assertCartEmpty(page);
 
-  // --- Empty the cart ---
-  const emptyBtn = cartDrawer.getByRole('button', { name: /Töm varukorg/i });
-  await expect(emptyBtn).toBeEnabled();
-  await emptyBtn.click();
-
-  // --- Handle confirm popup: "Är du säker på att du vill tömma din varukorg?" ---
-  const confirmQuestion = page.getByText(/Är du säker på att du vill tömma din varukorg\?/i);
-  const confirmVisible = await confirmQuestion.isVisible().catch(() => false);
-
-  if (confirmVisible) {
-    console.log('🧺 Confirm dialog for emptying cart appeared');
-
-    const confirmBtn = page.getByRole('button', { name: /^Töm$/i }).first();
-    await expect(confirmBtn).toBeEnabled();
-    await confirmBtn.click();
-
-    await expect(confirmQuestion).toBeHidden({ timeout: 5000 });
-
-    console.log('✅ Confirmed empty cart by clicking "Töm"');
-  } else {
-    console.log('ℹ️ No confirm dialog when emptying cart');
-  }
-
-  // --- Validate total = 0 kr and 0 items ---
-  await expect(
-    cartDrawer.getByText(/Totalt\s*\(0 varor\)/i)
-  ).toBeVisible({ timeout: 15_000 });
-
-  await expect(
-    cartDrawer.getByText(/\b0,00\s*kr\b/)
-  ).toBeVisible({ timeout: 15_000 });
-
-  console.log('✅ Cart is empty, total = 0 kr');
+  console.log("✅ Cart is empty, total = 0 kr");
 });
