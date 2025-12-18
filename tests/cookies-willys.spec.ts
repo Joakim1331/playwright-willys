@@ -54,11 +54,16 @@ await expect(page.getByRole('heading', { level: 1, name: /morötter/i })).toBeVi
 //await expect(page.locator('a[href^="/produkt/"]').first()).toBeVisible();
 
 // --- Wait until at least one carrot product with Jmf-pris is rendered
-const carrotCards = page.locator('article, div[data-item], div.sc-9f1d623-5')
+const carrotCards = page
+  .locator('main div:has(a[href^="/produkt/"])')
   .filter({ hasText: /Morot|Morötter/i })
-  .filter({ hasText: /Jmf-pris\s*[\d.,]+\s*kr\/kg/i });
+  .filter({ hasText: /Jmf-pris/i });
 
-await expect(carrotCards.first()).toBeVisible();
+await expect(
+  carrotCards.first(),
+  'Could not find any product card containing "Morot/Morötter"'
+).toBeVisible();
+
 
 // --- Collect Jmf-pris per card and pick the cheapest
 const count = await carrotCards.count();
@@ -76,7 +81,9 @@ for (let i = 0; i < count; i++) {
   const name: string = rawFirstLine.trim();
 
   // Safe Jmf-pris capture
-  const match = /Jmf-pris\s*([\d.,]+)\s*kr\/kg/i.exec(cardText);
+  const match = /Jmf[-\s]?pris[^\d]*([\d.,]+)\s*kr/i.exec(cardText);
+  console.log('--- PRODUCT CARD ---');
+console.log(cardText);
   const valueStr = match?.[1];
   if (!valueStr) continue;
 
